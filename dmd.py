@@ -41,7 +41,7 @@ def dmd(X, Y, eps=1e-5):
     right = Y_resh @ (v * lmbd_inv) @ right
     left = u @ left
     norm = tf.linalg.adjoint(left) * tf.linalg.matrix_transpose(right)
-    norm = tf.reduce_sum(norm, axi=-1)
+    norm = tf.reduce_sum(norm, axis=-1)
     norm = tf.math.sqrt(norm)
     right = right / norm
     left = left / tf.math.conj(norm)
