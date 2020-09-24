@@ -30,7 +30,7 @@ def dmd(X, Y, eps=1e-5):
     u = u[:, :ind]
     v = v[:, :ind]
     T_tilda = tf.linalg.adjoint(u) @ Y_resh @ v @ lmbd_inv
-    eig_vals, right = tf.linalg.eig(T_tilda, left=True)
+    eig_vals, right = tf.linalg.eig(T_tilda)
     _, left = tf.linalg.eig(tf.linalg.adjoint(T_tilda))
     '''right = Y @ v @ lmbd_inv @ right
     left = u @ left
