@@ -21,8 +21,8 @@ def dmd(X, Y, eps=1e-5):
         by tolerance eps."""
 
     dtype = X.dtype
-    X_resh = tf.reshape(X, (X.shape[-1], -1))
-    Y_resh = tf.reshape(Y, (Y.shape[-1], -1))
+    X_resh = tf.reshape(X, (X.shape[0], -1))
+    Y_resh = tf.reshape(Y, (Y.shape[0], -1))
     # SVD of X_resh matrix
     lmbd, u, v = tf.linalg.svd(X_resh)
     # number of singular vals > eps
@@ -61,8 +61,8 @@ def solve_regression(X, Y):
         n -- dimension of one data point"""
     
     dtype = X.dtype
-    X_resh = tf.reshape(X, (X.shape[-1], -1))
-    Y_resh = tf.reshape(Y, (Y.shape[-1], -1))
+    X_resh = tf.reshape(X, (X.shape[0], -1))
+    Y_resh = tf.reshape(Y, (Y.shape[0], -1))
     s, u, v = tf.linalg.svd(X_resh)
     ind = tf.cast(s > 1e-8, dtype=tf.int32)
     s_inv = tf.concat([1 / s[:ind], s[ind:]], axis=0)
