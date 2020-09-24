@@ -65,6 +65,7 @@ def solve_regression(X, Y):
     Y_resh = tf.reshape(Y, (Y.shape[0], -1))
     s, u, v = tf.linalg.svd(X_resh)
     ind = tf.cast(s > 1e-8, dtype=tf.int32)
+    ind = tf.reduce_sum(ind)
     s_inv = tf.concat([1 / s[:ind], s[ind:]], axis=0)
     s_inv = tf.cast(s_inv, dtype=dtype)
     X_pinv = (v * s_inv) @ tf.linalg.adjoint(u)
