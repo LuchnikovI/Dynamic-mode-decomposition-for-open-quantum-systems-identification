@@ -38,7 +38,7 @@ def dmd(X, Y, eps=1e-5):
     eig_vals, right = tf.linalg.eig(T_tilda)
     left = tf.linalg.adjoint(tf.linalg.inv(right))
     # eigendecomposition of T
-    right = Y @ (v * lmbd_inv) @ right
+    right = Y_resh @ (v * lmbd_inv) @ right
     left = u @ left
     norm = tf.linalg.adjoint(left) * tf.linalg.matrix_transpose(right)
     norm = tf.reduce_sum(norm, axi=-1)
@@ -61,9 +61,11 @@ def solve_regression(X, Y):
         n -- dimension of one data point"""
     
     dtype = X.dtype
-    s, u, v = tf.linalg.svd(X)
+    X_resh = tf.reshape(X, (X.shape[-1], -1))
+    Y_resh = tf.reshape(Y, (Y.shape[-1], -1))
+    s, u, v = tf.linalg.svd(X_resh)
     ind = tf.cast(s > 1e-8, dtype=tf.int32)
     s_inv = tf.concat([1 / s[:ind], s[ind:]], axis=0)
     s_inv = tf.cast(s_inv, dtype=dtype)
     X_pinv = (v * s_inv) @ tf.linalg.adjoint(u)
-    return Y @ X_pinv
+    return Y_resh @ X_pinv
