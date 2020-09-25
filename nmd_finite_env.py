@@ -36,13 +36,9 @@ class FiniteEnv:
                           optimize='optimal')
         frhof = tf.reshape(frhof, (self.n ** 2, self.n ** 2))
         # antianti commutator part of dissipator
-        FF = tf.linalg.adjoint(F) @ F
-        ffrho = tf.einsum('qp,qij,pkl->ikjl',
-                          gamma, FF, Id,
-                          optimize='optimal')
-        rhoff = tf.einsum('qp,qij,plk->ikjl',
-                          gamma, Id, FF,
-                          optimize='optimal')
+        FF = tf.einsum('qp,pki,kjq->ij', gamma, tf.math.conj(F), F)
+        ffrho = tf.einsum('ij,kl->ikjl', FF, Id)
+        rhoff = tf.einsum('ij,lk->ikjl', Id, FF)
         anti_com = 0.5 * (ffrho + rhoff)
         anti_com = tf.reshape(anti_com, (self.n ** 2, self.n ** 2))
         # dissipator
