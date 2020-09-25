@@ -31,7 +31,7 @@ class FiniteEnv:
         # gamma matrix
         gamma = (U * random_spec) * tf.linalg.adjoint(U)
         # F * F^\dagger part of dissipator
-        frhof = tf.einsum('qp,qij,pkl->ikjl',
+        frhof = tf.einsum('qp,qij,pkl->iljk',
                           gamma, F, tf.math.conj(F),
                           optimize='optimal')
         frhof = tf.reshape(frhof, (self.n ** 2, self.n ** 2))
