@@ -21,7 +21,7 @@ class FiniteEnv:
         # basis
         F = f_basis(self.n)
         # random spectrum of gamma matrix
-        random_spec = tf.random.uniform((self.n), dtype=tf.float64)
+        random_spec = tf.random.uniform((self.n,), dtype=tf.float64)
         random_spec = tf.cast(random_spec, dtype=tf.complex128)
         # random unitary
         U_re = tf.random.normal((self.n, self.n), dtype=tf.float64)
