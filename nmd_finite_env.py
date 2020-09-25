@@ -21,22 +21,28 @@ class FiniteEnv:
         # basis
         F = f_basis(self.n)
         # random spectrum of gamma matrix
-        random_spec = tf.random.uniform((self.n,), dtype=tf.float64)
+        random_spec = tf.random.uniform((self.n**2-1,), dtype=tf.float64)
         random_spec = tf.cast(random_spec, dtype=tf.complex128)
         # random unitary
-        U_re = tf.random.normal((self.n, self.n), dtype=tf.float64)
-        U_im = tf.random.normal((self.n, self.n), dtype=tf.float64)
+        U_re = tf.random.normal((self.n**2-1, self.n**2-1), dtype=tf.float64)
+        U_im = tf.random.normal((self.n**2-1, self.n**2-1), dtype=tf.float64)
         U = tf.complex(U_re, U_im)
         U, _ = tf.linalg.qr(U)
         # gamma matrix
         gamma = (U * random_spec) * tf.linalg.adjoint(U)
         # F * F^\dagger part of dissipator
-        frhof = tf.einsum('qp,qij,pkl->ikjl', gamma, F, tf.math.conj(F))
+        frhof = tf.einsum('qp,qij,pkl->ikjl',
+                          gamma, F, tf.math.conj(F),
+                          optimize='optimal')
         frhof = tf.reshape(frhof, (self.n ** 2, self.n ** 2))
         # antianti commutator part of dissipator
         FF = tf.linalg.adjoint(F) @ F
-        ffrho = tf.einsum('qp,qij,pkl->ikjl', gamma, FF, Id)
-        rhoff = tf.einsum('qp,qij,plk->ikjl', gamma, Id, FF)
+        ffrho = tf.einsum('qp,qij,pkl->ikjl',
+                          gamma, FF, Id,
+                          optimize='optimal')
+        rhoff = tf.einsum('qp,qij,plk->ikjl',
+                          gamma, Id, FF,
+                          optimize='optimal')
         anti_com = 0.5 * (ffrho + rhoff)
         anti_com = tf.reshape(anti_com, (self.n ** 2, self.n ** 2))
         # dissipator
