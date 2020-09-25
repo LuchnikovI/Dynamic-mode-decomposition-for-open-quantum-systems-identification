@@ -42,7 +42,7 @@ class FiniteEnv:
         anti_com = 0.5 * (ffrho + rhoff)
         anti_com = tf.reshape(anti_com, (self.n ** 2, self.n ** 2))
         # dissipator
-        diss = frhof - 0.5 * (ffrho + rhoff)
+        diss = frhof - anti_com
         
         '''hamiltonian part'''
         # random hamiltonian
