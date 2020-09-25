@@ -29,7 +29,7 @@ class FiniteEnv:
         U = tf.complex(U_re, U_im)
         U, _ = tf.linalg.qr(U)
         # gamma matrix
-        gamma = (U * random_spec) * tf.linalg.adjoint(U)
+        gamma = (U * random_spec) @ tf.linalg.adjoint(U)
         # F * F^\dagger part of dissipator
         frhof = tf.einsum('qp,qij,pkl->ikjl',
                           gamma, F, tf.math.conj(F),
