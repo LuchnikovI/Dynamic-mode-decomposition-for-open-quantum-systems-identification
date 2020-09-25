@@ -1,19 +1,29 @@
 import tensorflow as tf
 from utils import f_basis
 
+
 class FiniteEnv:
-    
+    """Class provides tools for simulation open quantum dynamics with finite
+    environment.
+    Args:
+        dim_sys: int value, dimension of system
+        dim_mem: in value, dimension of environment"""
+
     def __init__(self, dim_sys, dim_mem):
         
         self.dim_sys = dim_sys
         self.dim_mem = dim_mem
         self.n = dim_sys * dim_mem
         self.gen = None
-        
-    def rand_gen(self,
-                 dissipation_ampl,
-                 hamiltonian_ampl):
-       
+
+    def set_rand_gen(self,
+                     dissipation_ampl,
+                     hamiltonian_ampl):
+        """Method generates random lindblad generator.
+        Args:
+            dissipation_ampl: float value, amplitude of dissipative part
+            hamiltonian_ampl: float value, amplitude of hamiltonian part"""
+
         # identity matrix
         Id = tf.eye(self.n, dtype=tf.complex128)
         
@@ -58,4 +68,41 @@ class FiniteEnv:
         
         '''total generator'''
         self.gen = hamiltonian_ampl * com + dissipation_ampl * diss
+
+    def set_gen(self, gamma, H):
+        """Method generates lindblad generator from given gamma matrix
+        and Hamiltonian.
+        Args:
+            gamma: complex valued tensor of shape (n**2-1, n**2-1), matrix
+                that defines dissipator
+            H: complex valued tensor of shape (n, n), Hamiltonian"""
+
+        # identity matrix
+        Id = tf.eye(self.n, dtype=tf.complex128)
         
+        '''dissipator part'''
+        # basis
+        F = f_basis(self.n)
+        # F * F^\dagger part of dissipator
+        frhof = tf.einsum('qp,qij,pkl->ikjl',
+                          gamma, F, tf.math.conj(F),
+                          optimize='optimal')
+        frhof = tf.reshape(frhof, (self.n ** 2, self.n ** 2))
+        # antianti commutator part of dissipator
+        FF = tf.einsum('qp,pki,qkj->ij', gamma, tf.math.conj(F), F)
+        ffrho = tf.einsum('ij,kl->ikjl', FF, Id)
+        rhoff = tf.einsum('ij,lk->ikjl', Id, FF)
+        anti_com = 0.5 * (ffrho + rhoff)
+        anti_com = tf.reshape(anti_com, (self.n ** 2, self.n ** 2))
+        # dissipator
+        diss = frhof - anti_com
+        
+        '''hamiltonian part'''
+        # comutator
+        hrho = tf.einsum('ij,kl->ikjl', H, Id)
+        rhoh = tf.einsum('ij,lk->ikjl', Id, H)
+        com = 1j * (rhoh - hrho)
+        com = tf.reshape(com, (self.n ** 2, self.n ** 2))
+        
+        '''total generator'''
+        self.gen = com + diss
