@@ -120,7 +120,7 @@ class FiniteEnv:
         steady_state = steady_state / tf.linalg.trace(steady_state)
         
         # steady state of a reservoir
-        steady_state = tf.reshape(steady_state, (self.sim_sys,
+        steady_state = tf.reshape(steady_state, (self.dim_sys,
                                                  self.dim_mem,
                                                  self.dim_sys,
                                                  self.dim_mem))
@@ -136,7 +136,7 @@ class FiniteEnv:
         system_states = []
         for _ in range(int(total_time / time_step)):
             
-            system_state = tf.reshape(states, (self.sim_sys,
+            system_state = tf.reshape(states, (self.dim_sys,
                                                self.dim_mem,
                                                self.dim_sys,
                                                self.dim_mem))
