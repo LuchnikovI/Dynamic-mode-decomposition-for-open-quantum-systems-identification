@@ -111,8 +111,17 @@ class FiniteEnv:
                  total_time,
                  time_step,
                  in_states):
-        
-        
+        """Simulates the dynamics of a non-markovian system.
+        Args:
+            total_time: float value, total simulation time
+            time_step: float value, simulation time step
+            in_states: complex valued tensor of shape (N, sys_dim, sys_dim),
+                where N is number of parralel experiments, sys_dim is the
+                dimension of a system
+        Returns:
+            complex valued tensor of shape (N, time_steps, sys_dim, sys_dim),
+            the dynamics of the system density matrix"""
+
         # steady state of a lindbladian
         _, _, v = tf.linalg.svd(self.gen)
         steady_state = v[:, -1]
@@ -133,15 +142,20 @@ class FiniteEnv:
         # quantum channel
         phi = tf.linalg.expm(time_step * self.gen)
         
-        system_states = []
+        system_states = []  # list will be filled by dens. matrix vs time
+
+        # simulation loop
         for _ in range(int(total_time / time_step)):
             
-            system_state = tf.reshape(states, (self.dim_sys,
+            system_state = tf.reshape(states, (-1, self.dim_sys,
                                                self.dim_mem,
                                                self.dim_sys,
                                                self.dim_mem))
-            system_state = tf.einsum('ikjk->ij', system_state)
+            system_state = tf.einsum('qikjk->qij', system_state)
             system_states.append(system_state)
             states = tf.einsum('ij,qj->qi', phi, states)
+            
+        system_states = tf.convert_to_tensor(system_states)
+        system_states = tf.transpose(system_states, (1, 0, 2, 3))
             
         return system_states
