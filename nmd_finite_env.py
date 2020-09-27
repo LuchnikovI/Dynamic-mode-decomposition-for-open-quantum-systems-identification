@@ -59,7 +59,7 @@ class FiniteEnv:
         H_re = tf.random.normal((self.n, self.n), dtype=tf.float64)
         H_im = tf.random.normal((self.n, self.n), dtype=tf.float64)
         H = tf.complex(H_re, H_im)
-        H = 0.5 * (H - tf.linalg.adjoint(H))
+        H = 0.5 * (H + tf.linalg.adjoint(H))
         # comutator
         hrho = tf.einsum('ij,kl->ikjl', H, Id)
         rhoh = tf.einsum('ij,lk->ikjl', Id, H)
