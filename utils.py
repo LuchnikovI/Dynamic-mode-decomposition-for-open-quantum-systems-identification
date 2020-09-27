@@ -23,3 +23,21 @@ def f_basis(n, dtype=tf.complex128):
     F = tf.concat([diag, F], axis=1)
     F = tf.reshape(F, (-1, n, n))
     return F
+
+
+def hankel(T, K):
+    """Return Hankel tensor from an ordinary tensor.
+    Args:
+        T: tensor of shape (batch_size, n, m)
+        K: int value, depth of the Hankel matrix
+    Returns:
+        tensor of shape (batch_size, n-K+1, K, m)"""
+
+    L = T.shape[1]
+    i = tf.constant(1)
+    t = T[:, tf.newaxis, :K]
+    cond = lambda i, t: i<=L-K
+    body = lambda i, t: [i+1, tf.concat([t, T[:, tf.newaxis, i:K+i]], axis=1)]
+    _, t = tf.while_loop(cond, body, loop_vars=[i, t],
+                  shape_invariants=[i.shape, tf.TensorShape([T.shape[0], None, K, T.shape[-1]])])
+    return t
