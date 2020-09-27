@@ -106,3 +106,42 @@ class FiniteEnv:
         
         '''total generator'''
         self.gen = com + diss
+
+    def dynamics(self,
+                 total_time,
+                 time_step,
+                 in_states):
+        
+        
+        # steady state of a lindbladian
+        _, _, v = tf.linalg.svd(self.gen)
+        steady_state = v[:, -1]
+        steady_state = tf.reshape(steady_state, (self.n, self.n))
+        steady_state = steady_state / tf.linalg.trace(steady_state)
+        
+        # steady state of a reservoir
+        steady_state = tf.reshape(steady_state, (self.sim_sys,
+                                                 self.dim_mem,
+                                                 self.dim_sys,
+                                                 self.dim_mem))
+        steady_state = tf.einsum('kikj->ij', steady_state)
+        
+        # states of system + reservoir
+        states = tf.einsum('qij,kl->qikjl', in_states, steady_state)
+        states = tf.reshape(states, (-1, self.n**2))
+        
+        # quantum channel
+        phi = tf.linalg.expm(time_step * self.gen)
+        
+        system_states = []
+        for _ in range(int(total_time / time_step)):
+            
+            system_state = tf.reshape(states, (self.sim_sys,
+                                               self.dim_mem,
+                                               self.dim_sys,
+                                               self.dim_mem))
+            system_state = tf.einsum('ikjk->ij', system_state)
+            system_states.append(system_state)
+            states = tf.einsum('ij,qj->qi', phi, states)
+            
+        return system_states
