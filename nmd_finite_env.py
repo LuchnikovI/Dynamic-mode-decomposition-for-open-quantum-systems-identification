@@ -76,7 +76,8 @@ class FiniteEnv:
             gamma: complex valued tensor of shape (n**2-1, n**2-1), matrix
                 that defines dissipator
             H: complex valued tensor of shape (n, n), Hamiltonian"""
-
+        
+        # TODO: check whether it works or not
         # identity matrix
         Id = tf.eye(self.n, dtype=tf.complex128)
         
@@ -121,7 +122,8 @@ class FiniteEnv:
         Returns:
             complex valued tensor of shape (N, time_steps, sys_dim, sys_dim),
             the dynamics of the system density matrix"""
-
+        
+        # TODO get rid of some tf.einsums
         # steady state of a lindbladian
         _, _, v = tf.linalg.svd(self.gen)
         steady_state = v[:, -1]
@@ -145,6 +147,7 @@ class FiniteEnv:
         system_states = []  # list will be filled by dens. matrix vs time
 
         # simulation loop
+        # TODO: tf.while_loop instead of standard for
         for _ in range(int(total_time / time_step)):
             
             system_state = tf.reshape(states, (-1, self.dim_sys,
