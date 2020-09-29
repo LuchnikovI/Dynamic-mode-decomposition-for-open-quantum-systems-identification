@@ -94,9 +94,12 @@ class Embedding:
             if i == ind:
                 U = tf.tensordot(u, tf.eye(self.mem_dim, dtype=u.dtype), axes=0)
                 U = tf.transpose(U, (0, 2, 1, 3))
+                U = tf.reshape(U, (self.sys_dim*self.mem_dim,
+                                   self.sys_dim*self.mem_dim))
                 U = tf.tensordot(U, tf.math.conj(U), axes=0)
                 U = tf.transpose(U, (0, 2, 1, 3))
-                U = tf.reshape(U, (u.shape[0] ** 2, u.shape[0] ** 2))
+                U = tf.reshape(U, ((self.sys_dim*self.mem_dim)**2,
+                                   (self.sys_dim*self.mem_dim)**2))
                 state = tf.tensordot(U, state, axes=1)
         sys_states = tf.convert_to_tensor(sys_states)
         return sys_states
