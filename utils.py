@@ -87,7 +87,7 @@ def dmd(trajectories, K, eps=1e-5):
     lmbd, u, v = tf.linalg.svd(X_resh)
     # TODO double check correctness of the lines below
     # number of singular vals > eps
-    ind = tf.reduce_sum(tf.cast(lmbd > eps, dtype=tf.int32))
+    ind = tf.reduce_sum(tf.cast(lmbd > eps, dtype=tf.float32))
     minimal_rank = ind
     eff_res_dim = int(tf.math.sqrt(ind) / m + 1)
     ind = (m ** 2) * (eff_res_dim ** 2)
