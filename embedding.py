@@ -71,7 +71,7 @@ class Embedding:
             ind: int number, discrete time moment when to apply control
                 signal
             u: complex valued tensor of shape (m, m), unitary matrix
-                representing control signal
+                representing control
         Returns:
             complex valued tensor of shape (total_time_steps, m, m)'''
 
@@ -92,7 +92,9 @@ class Embedding:
             sys_states.append(sys_state)
             state = tf.tensordot(self.channel, state, axes=1)
             if i == ind:
-                U = tf.tensordot(u, tf.math.conj(u), axes=0)
+                U = tf.tensordot(u, tf.eye(self.mem_dim, dtype=u.dtype), axes=0)
+                U = tf.transpose(U, (0, 2, 1, 3))
+                U = tf.tensordot(U, tf.math.conj(U), axes=0)
                 U = tf.transpose(U, (0, 2, 1, 3))
                 U = tf.reshape(U, (u.shape[0] ** 2, u.shape[0] ** 2))
                 state = tf.tensordot(U, state, axes=1)
