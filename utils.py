@@ -61,7 +61,7 @@ def dmd(trajectories, K, eps=1e-5):
     Returns:
         three tensors of shapes (r,), (n, r), and (n, r),
         dominant eigenvalues and corresponding (right and left)
-        eigenvectors, and minimal possible rank
+        eigenvectors
     Note:
         n -- dimension of one data point, r -- rank that is determined
         by tolerance eps."""
@@ -85,12 +85,8 @@ def dmd(trajectories, K, eps=1e-5):
     Y_resh = tf.reshape(Y, (K*(m**2), bs*(n-K)))
     # SVD of X_resh matrix
     lmbd, u, v = tf.linalg.svd(X_resh)
-    # TODO double check correctness of the lines below
     # number of singular vals > eps
     ind = tf.reduce_sum(tf.cast(lmbd > eps, dtype=tf.float32))
-    minimal_rank = ind
-    eff_res_dim = int(tf.math.sqrt(ind) / m + 1)
-    ind = (m ** 2) * (eff_res_dim ** 2)
     # truncation of all elements of the svd
     lmbd = lmbd[:ind]
     lmbd_inv = 1 / lmbd
@@ -109,7 +105,7 @@ def dmd(trajectories, K, eps=1e-5):
     norm = tf.math.sqrt(norm)
     right = right / norm
     left = left / tf.math.conj(norm)
-    return eig_vals, right, left, minimal_rank
+    return eig_vals, right, left
 
 
 @tf.function
