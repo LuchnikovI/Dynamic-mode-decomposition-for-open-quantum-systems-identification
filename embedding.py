@@ -1,49 +1,91 @@
 import tensorflow as tf
-from utils import hankel
-from dmd import dmd
+from utils import dmd
 import math
 
 class Embedding:
-
+    '''This class provides tools for dmd based learning of
+    markovian embadding.'''
     def __init__(self):
         self.channel = None
         self.enc = None
+        self.min_rank = None
+        self.sys_dim = None
+        self.mem_dim = None
+        self.K = None
 
-    def learn(self, trajectories, K):
-        # bs is batch size
+    def learn(self, trajectories, K, eps=1e-5):
+        '''Reconstructs markovian embedding from trajectories.
+        Args:
+            trajectories: complex valued tensor of shape (bs, n, m, m),
+                where bs is number of trajectories, n is total number of
+                time steps, m is size of density matrix
+            K: int value, memory depth
+            eps: tolerance'''
+
+        # memory depth
+        self.K = K
+        # bs is number of trajectories
         # n is number of time steps
-        # m is the size of density matrix
+        # m is the size of a density matrix
         bs, n, m, _ = trajectories.shape
+        self.sys_dim = m
         dtype = trajectories.dtype
-        # reshape density matrices to vectors
-        t = tf.reshape(trajectories, (bs, n, m**2))
-        # build hankel matrix of shape (bs, n-K+1, K, m**2)
-        t = hankel(t, K)
-        # build X and Y matrices, both have shape (K*(m**2), bs, n-K)
-        t = tf.reshape(t, (bs, n-K+1, K*(m**2)))
-        t = tf.transpose(t, (2, 0, 1))
-        X = t[..., :-1]
-        Y = t[..., 1:]
-        # calculate T matrix in the form of spectral decomposition
-        # lmbd is the spectrun that has shape (r,)
-        # right and left are right and left eigenvectors, both have shape
-        # (K*(m**2), r)
-        lmbd, right, left = dmd(X, Y)
+        # dmd
+        lmbd, right, left = dmd(trajectories, K, eps)
         lmbd = tf.cast(lmbd, dtype=dtype)
         r = lmbd.shape[0]
+        self.min_rank = r
         # dimension of an effective reservoir
-        eff_dim = int(math.sqrt(r)/m)
-        dec = tf.reshape(right, (K, m**2, r))[-1]
+        eff_dim = int(math.sqrt(r)/m + 1)
+        eff_r = (eff_dim ** 2) * (m ** 2)
+        self.mem_dim = eff_dim
+        dr = eff_r - r
+        # adding extra dimension to elements of eigendecomposition
+        lmbd = tf.concat([tf.zeros((dr,), dtype=dtype), lmbd],
+                         axis=0)
+        right = tf.concat([tf.zeros((right.shape[0], dr), dtype=dtype), right],
+                          axis=1)
+        left = tf.concat([tf.zeros((left.shape[0], dr), dtype=dtype), left],
+                         axis=1)
+        dec = tf.reshape(right, (K, m**2, eff_r))[-1]
         # trace operator
-        '''ptrace = tf.eye(eff_dim * m ** 2, dtype=dtype)
+        ptrace = tf.eye(eff_dim * m ** 2, dtype=dtype)
         ptrace = tf.reshape(ptrace, (m, m, eff_dim, m, m, eff_dim))
         ptrace = tf.transpose(ptrace, (0, 1, 3, 2, 4, 5))
-        ptrace = tf.reshape(ptrace, (m**2, r))
+        ptrace = tf.reshape(ptrace, (m**2, eff_r))
+        # attempt to build quantum channel from the spectrum of T
         s, u, v = tf.linalg.svd(ptrace)
         s = tf.cast(s, dtype=dtype)
         s_inv = 1 / s
-        Q = (v * s_inv) @ tf.linalg.adjoint(u) @ dec + tf.eye(r, dtype=dtype) -\
+        Q = (v * s_inv) @ tf.linalg.adjoint(u) @ dec + tf.eye(eff_r, dtype=dtype) -\
         v @ tf.linalg.adjoint(v)
         self.channel = (Q * lmbd) @ tf.linalg.inv(Q)
-        self.enc = tf.linalg.adjoint(left)'''
-        return r
+        self.enc = Q @ tf.linalg.adjoint(left)
+
+    def predict(self, history, total_time_steps):
+        '''Simulates dynamics of a learned markovian embadding.
+        Args:
+            history: complex valued tensor of shape (K, m, m),
+                history before prediction
+            total_time steps: int value, number of time steps
+        Returns:
+            complex valued tensor of shape (total_time_steps, m, m)'''
+
+        # will be filled by state per time step
+        sys_states = []
+        
+        # initial state
+        resh_history = tf.reshape(history, (-1,))
+        state = tf.tensordot(self.enc, resh_history, axes=1)
+        
+        # simulation loop
+        for _ in range(total_time_steps):
+            sys_state = tf.reshape(state, (self.sys_dim,
+                                           self.mem_dim,
+                                           self.sys_dim,
+                                           self.mem_dim))
+            sys_state = tf.einsum('ikjk->ij', sys_state)
+            sys_states.append(sys_state)
+            state = tf.tensordot(self.channel, state, axes=1)
+        sys_states = tf.convert_to_tensor(sys_states)
+        return sys_states
