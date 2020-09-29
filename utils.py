@@ -86,7 +86,7 @@ def dmd(trajectories, K, eps=1e-5):
     # SVD of X_resh matrix
     lmbd, u, v = tf.linalg.svd(X_resh)
     # number of singular vals > eps
-    ind = tf.reduce_sum(tf.cast(lmbd > eps, dtype=tf.float32))
+    ind = tf.reduce_sum(tf.cast(lmbd > eps, dtype=tf.int32))
     # truncation of all elements of the svd
     lmbd = lmbd[:ind]
     lmbd_inv = 1 / lmbd
