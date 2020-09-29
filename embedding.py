@@ -62,12 +62,16 @@ class Embedding:
         self.channel = (Q * lmbd) @ tf.linalg.inv(Q)
         self.enc = Q @ tf.linalg.adjoint(left)
 
-    def predict(self, history, total_time_steps):
+    def predict(self, history, total_time_steps, ind, u):
         '''Simulates dynamics of a learned markovian embadding.
         Args:
             history: complex valued tensor of shape (K, m, m),
                 history before prediction
             total_time steps: int value, number of time steps
+            ind: int number, discrete time moment when to apply control
+                signal
+            u: complex valued tensor of shape (m, m), unitary matrix
+                representing control signal
         Returns:
             complex valued tensor of shape (total_time_steps, m, m)'''
 
@@ -79,7 +83,7 @@ class Embedding:
         state = tf.tensordot(self.enc, resh_history, axes=1)
         
         # simulation loop
-        for _ in range(total_time_steps):
+        for i in range(total_time_steps):
             sys_state = tf.reshape(state, (self.sys_dim,
                                            self.mem_dim,
                                            self.sys_dim,
@@ -87,5 +91,10 @@ class Embedding:
             sys_state = tf.einsum('ikjk->ij', sys_state)
             sys_states.append(sys_state)
             state = tf.tensordot(self.channel, state, axes=1)
+            if i == ind:
+                U = tf.tensordot(u, tf.math.conj(u), axes=0)
+                U = tf.transpose(U, (0, 2, 1, 3))
+                U = tf.reshape(U, (u.shape[0] ** 2, u.shape[0] ** 2))
+                state = tf.tensordot(U, state, axes=1)
         sys_states = tf.convert_to_tensor(sys_states)
         return sys_states
