@@ -71,7 +71,7 @@ class Embedding:
             sys_state = tf.reshape(sys_state, (self.sys_dim,
                                                self.sys_dim))
             sys_states.append(sys_state)
-            state = tf.tensordot(self.channel, state, axes=1)
+            state = self.channel * state
             if i == ind:
                 U = tf.tensordot(u, tf.math.conj(u), axes=0)
                 U = tf.transpose(U, (0, 2, 1, 3))
