@@ -1,10 +1,11 @@
 import tensorflow as tf
 import math
 
+
 @tf.function
 def f_basis(n, dtype=tf.complex128):
     """The function returns basis in the space of real traceless matrices
-    of size n. For all matrices, the following condition holds true 
+    of size n. For all matrices, the following condition holds true
     <F_i, F_j> = I_ij, where I is the identity matrix.
     Args:
         n: int value, dimension of a space
@@ -65,7 +66,7 @@ def dmd(trajectories, K, eps=1e-5):
     Note:
         n -- dimension of one data point, r -- rank that is determined
         by tolerance eps."""
-    
+
     # bs is batch size
     # n is number of time steps
     # m is the size of density matrix
@@ -120,7 +121,7 @@ def solve_regression(X, Y):
         tensor of shape (n, n), transition matrix
     Note:
         n -- dimension of one data point"""
-    
+
     dtype = X.dtype
     X_resh = tf.reshape(X, (X.shape[0], -1))
     Y_resh = tf.reshape(Y, (Y.shape[0], -1))
@@ -131,3 +132,22 @@ def solve_regression(X, Y):
     s_inv = tf.cast(s_inv, dtype=dtype)
     X_pinv = (v * s_inv) @ tf.linalg.adjoint(u)
     return Y_resh @ X_pinv
+
+
+@tf.function
+def pinv(X, eps=1e-5):
+    """Returns pinv of a given matrix.
+    Args:
+        X: tensor of shape (..., a, b)
+        eps: float value, tolerance
+    Returns:
+        tensor of shape (..., a, b)"""
+
+    s, u, v = tf.linalg.svd(X)
+    ind = tf.reduce_sum(tf.cast(s > eps, dtype=tf.int32))
+    u = u[:, :ind]
+    v = v[:, :ind]
+    s = s[:ind]
+    s_inv = 1 / s
+    s_inv = tf.cast(s_inv, dtype=u.dtype)
+    return (v * s_inv) @ tf.linalg.adjoint(u)
