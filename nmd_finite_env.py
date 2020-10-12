@@ -111,7 +111,8 @@ class FiniteEnv:
     def dynamics(self,
                  total_time,
                  time_step,
-                 in_states):
+                 in_states,
+                 ind, u):
         """Simulates the dynamics of a non-markovian system.
         Args:
             total_time: float value, total simulation time
@@ -119,6 +120,8 @@ class FiniteEnv:
             in_states: complex valued tensor of shape (N, sys_dim, sys_dim),
                 where N is number of parralel experiments, sys_dim is the
                 dimension of a system
+            ind: int value, moment of time, where to apply control
+            u: complex valued tensor of shape (m, m), unitary matrix representing control
         Returns:
             complex valued tensor of shape (N, time_steps, sys_dim, sys_dim),
             the dynamics of the system density matrix"""
@@ -148,7 +151,7 @@ class FiniteEnv:
 
         # simulation loop
         # TODO: tf.while_loop instead of standard for
-        for _ in range(int(total_time / time_step)):
+        for time in range(int(total_time / time_step)):
             
             system_state = tf.reshape(states, (-1, self.dim_sys,
                                                self.dim_mem,
@@ -157,6 +160,16 @@ class FiniteEnv:
             system_state = tf.einsum('qikjk->qij', system_state)
             system_states.append(system_state)
             states = tf.einsum('ij,qj->qi', phi, states)
+            if time==ind:
+                U = tf.tensordot(u, tf.eye(self.dim_mem, dtype=u.dtype))
+                U = tf.transpose(U, (0, 2, 1, 3))
+                U = tf.reshape(U, (self.dim_sys * self.dim_mem,
+                                   self.dim_sys * self.dim_mem))
+                U = tf.tensordot(U, tf.math.conj(U), axes=0)
+                U = tf.transpose(U, (0, 2, 1, 3))
+                U = tf.reshape(U, ((self.dim_sys * self.dim_mem) ** 2,
+                                   (self.dim_sys * self.dim_mem) ** 2))
+                states = tf.einsum('ij,qj->qi', U, states)
             
         system_states = tf.convert_to_tensor(system_states)
         system_states = tf.transpose(system_states, (1, 0, 2, 3))
