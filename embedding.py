@@ -67,7 +67,7 @@ class Embedding:
 
         # simulation loop
         for i in range(total_time_steps):
-            sys_state = tf.tensordot(self.dec, state)
+            sys_state = tf.tensordot(self.dec, state, axes=1)
             sys_state = tf.reshape(state, (self.sys_dim,
                                            self.sys_dim))
             sys_states.append(sys_state)
