@@ -161,7 +161,7 @@ class FiniteEnv:
             system_states.append(system_state)
             states = tf.einsum('ij,qj->qi', phi, states)
             if time==ind:
-                U = tf.tensordot(u, tf.eye(self.dim_mem, dtype=u.dtype))
+                U = tf.tensordot(u, tf.eye(self.dim_mem, dtype=u.dtype), axes=0)
                 U = tf.transpose(U, (0, 2, 1, 3))
                 U = tf.reshape(U, (self.dim_sys * self.dim_mem,
                                    self.dim_sys * self.dim_mem))
