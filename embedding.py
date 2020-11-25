@@ -12,17 +12,14 @@ class Embedding:
         self.dec = None
         self.K = None
 
-    def learn(self, trajectories, K, eps=1e-5):
+    def learn(self, trajectories, eps=1e-6):
         '''Reconstructs markovian embedding from trajectories.
         Args:
             trajectories: complex valued tensor of shape (bs, n, m, m),
                 where bs is number of trajectories, n is total number of
                 time steps, m is size of density matrix
-            K: int value, memory depth
-            eps: tolerance'''
+            eps: float value, std of additive noise'''
 
-        # memory depth
-        self.K = K
         # bs is number of trajectories
         # n is number of time steps
         # m is the size of a density matrix
@@ -30,8 +27,9 @@ class Embedding:
         self.sys_dim = m
         dtype = trajectories.dtype
         # dmd
-        lmbd, right, left = dmd(trajectories, K, eps)
+        lmbd, right, left, K = dmd(trajectories, eps)
         lmbd = tf.cast(lmbd, dtype=dtype)
+        self.K = K
         self.rank = lmbd.shape[0]
         self.dec = tf.reshape(right, (K, m**2, self.rank))[-1]
         self.channel = lmbd

@@ -129,12 +129,11 @@ def dmd(trajectories, eps=1e-6):
         trajectories: complex valued tensor of shape (bs, n, m, m),
             quantum trajectories, bs enumerates trajectories, n is total
             number of time steps, m is dimension of density matrix
-        K: int number, memory depth
         eps: float value, std of additive noise
     Returns:
         three tensors of shapes (r,), (n, r), and (n, r),
         dominant eigenvalues and corresponding (right and left)
-        eigenvectors
+        eigenvectors, and one int value, representing the minimal sufficient K
     Note:
         n -- dimension of one data point, r -- rank that is determined
         by tolerance eps."""
@@ -172,7 +171,7 @@ def dmd(trajectories, eps=1e-6):
     norm = tf.math.sqrt(norm)
     right = right / norm
     left = left / tf.math.conj(norm)
-    return eig_vals, right, left
+    return eig_vals, right, left, K
 
 
 @tf.function
