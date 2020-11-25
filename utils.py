@@ -30,13 +30,13 @@ def hankel(T, K):
     """Return Hankel tensor from an ordinary tensor.
     Args:
         T: tensor of shape (batch_size, n, m)
-        K: int value, depth of the Hankel matrix
+        K: int value, mamort depth
     Returns:
         tensor of shape (batch_size, n-K+1, K, m)"""
-    shape_inv = tf.TensorShape([T.shape[0],
+    shape_inv = tf.TensorShape([T.get_shape()[0],
                                 None,
                                 K,
-                                T.shape[-1]])
+                                T.get_shape()[-1]])
 
     L = T.shape[1]
     i = tf.constant(1)
@@ -44,7 +44,7 @@ def hankel(T, K):
     cond = lambda i, t: i<=L-K
     body = lambda i, t: [i+1, tf.concat([t, T[:, tf.newaxis, i:K+i]], axis=1)]
     _, t = tf.while_loop(cond, body, loop_vars=[i, t],
-                  shape_invariants=[tf.shape(t), shape_inv])
+                  shape_invariants=[t.get_shape(), shape_inv])
     return t
 
 
