@@ -142,7 +142,7 @@ def dmd(trajectories, eps=1e-6):
     # reshape density matrices to vectors
     t = tf.reshape(trajectories, (bs, n, m**2))
     # build hankel matrix of shape (bs, n-K+1, K, m**2)
-    K = optimal_K(t, eps=1e-6)
+    K = optimal_K(t, eps=eps)
     t = hankel(t, K)
     # build X and Y tensors, both have shape (K*(m**2), bs, n-K)
     t = tf.reshape(t, (bs, n-K+1, K*(m**2)))
@@ -153,7 +153,7 @@ def dmd(trajectories, eps=1e-6):
     X_resh = tf.reshape(X, (K*(m**2), bs*(n-K)))
     Y_resh = tf.reshape(Y, (K*(m**2), bs*(n-K)))
     # SVD of X_resh matrix
-    lmbd, u, v = trunc_svd(X_resh, eps=1e-6)
+    lmbd, u, v = trunc_svd(X_resh, eps=eps)
     # inverse of singular values
     lmbd_inv = 1 / lmbd
     # eigendecomposition of T_tilda
