@@ -45,6 +45,67 @@ def hankel(T, K):
 
 
 @tf.function
+def trunc_svd(X, eps=1e-6):
+    """Calculates truncated svd with optimal threshold.
+    Args:
+        X: complex valued tensor of shape (q, p)
+        eps: std of additive noise
+    Returns:
+        three complex valued tensors u, s, v of shapes (q, r),
+        (r,), (p, r), where r is optimal rank"""
+
+    # svd
+    u, s, v = tf.linalg.svd(X)
+
+    real_dtype = s.dtype
+    complex_dtype = u.dtype
+    shape = tf.shape(X)
+
+    # threshold
+    q, p = shape[0], shape[1]
+    q, p = tf.cast(q, dtype=real_dtype), tf.cast(p, dtype=real_dtype)
+    threshold = eps * (tf.math.sqrt(2 * q) + tf.math.sqrt(2 * p))
+
+    # optimal rank
+    r = tf.reduce_sum(tf.cast(s > threshold, dtype=tf.int32))
+    return u[:, :r], tf.cast(s[:r], dtype=complex_dtype), v[:, :r]
+
+
+@tf.function
+def optimal_K(trajectories, eps=1e-6):
+    
+    shape = tf.shape(trajectories)
+    bs, n,  m = shape[0], shape[1], shape[2]
+    dtype = trajectories.dtype
+    
+    # initial parameters
+    K = tf.constant(0)
+    err = tf.math.real(tf.constant(1e8, dtype=dtype))
+    q = tf.constant(0)
+    p = tf.constant(0)
+    
+    def body(K, err, q, p):
+        K_new = K + 1
+        H = hankel(trajectories, K_new)
+        N = n - K_new
+        X = H[:, :-1]
+        Y = H[:, 1:]
+        q = tf.constant(bs * N)
+        p = tf.constant(K_new * m)
+        X_resh = tf.reshape(X, (q, p))
+        Y_resh = tf.reshape(Y, (q, p))
+        X_resh = tf.transpose(X_resh)
+        Y_resh = tf.transpose(Y_resh)
+        _, _, v = trunc_svd(X_resh, eps=eps)
+        delta = Y_resh - Y_resh @ v @ tf.linalg.adjoint(v)
+        return K_new, tf.math.real(tf.linalg.norm(delta)), q, p
+
+    cond = lambda K, err, q, p: err > tf.math.sqrt(tf.cast(2 * q * p, dtype=err.dtype)) * eps
+    K, _, _, _ = tf.while_loop(cond, body, loop_vars=[K, err, q, p])
+    return K
+
+
+@tf.function
 def dmd(trajectories, K, eps=1e-5):
     """Solves the following linear regression problem
     ||TX - Y||_F --> min with respect to transition matrix T.
