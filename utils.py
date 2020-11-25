@@ -76,7 +76,7 @@ def trunc_svd(X, eps=1e-6):
 def optimal_K(trajectories, eps=1e-6):
     """Returns minimal sufficient K.
     Args:
-        trajectories: complex valued tensor of shape (bs, n, m, m),
+        trajectories: complex valued tensor of shape (bs, n, m),
             quantum trajectories, bs enumerates trajectories, n is total
             number of time steps, m is dimension of density matrix
         eps: std of additive noise
@@ -142,7 +142,7 @@ def dmd(trajectories, eps=1e-6):
     # reshape density matrices to vectors
     t = tf.reshape(trajectories, (bs, n, m**2))
     # build hankel matrix of shape (bs, n-K+1, K, m**2)
-    K = optimal_K(trajectories, eps=1e-6)
+    K = optimal_K(t, eps=1e-6)
     t = hankel(t, K)
     # build X and Y tensors, both have shape (K*(m**2), bs, n-K)
     t = tf.reshape(t, (bs, n-K+1, K*(m**2)))
