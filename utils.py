@@ -40,7 +40,7 @@ def hankel(T, K):
     cond = lambda i, t: i<=L-K
     body = lambda i, t: [i+1, tf.concat([t, T[:, tf.newaxis, i:K+i]], axis=1)]
     _, t = tf.while_loop(cond, body, loop_vars=[i, t],
-                  shape_invariants=[tf.shape(t)), tf.TensorShape(tf.shape(T)[0], None, K, tf.shape(T)[-1]])])
+                  shape_invariants=[tf.shape(t), tf.TensorShape(tf.shape(T)[0], None, K, tf.shape(T)[-1])])
     return t
 
 
