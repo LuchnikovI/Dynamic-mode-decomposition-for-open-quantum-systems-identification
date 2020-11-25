@@ -25,7 +25,6 @@ def f_basis(n, dtype=tf.complex128):
     return F
 
 
-@tf.function
 def hankel(T, K):
     """Return Hankel tensor from an ordinary tensor.
     Args:
@@ -48,7 +47,6 @@ def hankel(T, K):
     return t
 
 
-@tf.function
 def trunc_svd(X, eps=1e-6):
     """Calculates truncated svd with optimal threshold.
     Args:
@@ -117,7 +115,6 @@ def optimal_K(trajectories, eps=1e-6):
     return int(K)
 
 
-@tf.function
 def dmd(trajectories, eps=1e-6):
     """Solves the following linear regression problem
     ||TX - Y||_F --> min with respect to transition matrix T.
