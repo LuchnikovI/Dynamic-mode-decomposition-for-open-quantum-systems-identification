@@ -25,7 +25,6 @@ def f_basis(n, dtype=tf.complex128):
     return F
 
 
-@tf.function
 def hankel(T, K):
     """Return Hankel tensor from an ordinary tensor.
     Args:
@@ -35,7 +34,7 @@ def hankel(T, K):
         tensor of shape (batch_size, n-K+1, K, m)"""
     shape_inv = tf.TensorShape([T.get_shape()[0],
                                 None,
-                                K,
+                                int(K),
                                 T.get_shape()[-1]])
 
     L = T.shape[1]
@@ -90,7 +89,7 @@ def optimal_K(trajectories, eps=1e-6):
     
     def body(K, err, q, p):
         K_new = K + 1
-        H = hankel(trajectories, K_new)
+        H = hankel(trajectories, int(K_new))
         N = n - K_new
         X = H[:, :-1]
         Y = H[:, 1:]
@@ -107,7 +106,7 @@ def optimal_K(trajectories, eps=1e-6):
     cond = lambda K, err, q, p: err > tf.math.sqrt(tf.cast(2 * q * p, dtype=err.dtype)) * eps
 
     K, _, _, _ = tf.while_loop(cond, body, loop_vars=[K, err, q, p])
-    return int(K)
+    return K
 
 
 @tf.function
