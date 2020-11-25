@@ -32,7 +32,7 @@ def apply_dephazing(rho, time, tau=1):
     p = 1 - np.exp(- time/tau)
     return ((1 - p/2) * rho + p/2 * sigma_z @ rho @ sigma_z)
 
-def apply_depolarization(rho, time, tau=1):
+def apply_depolarizing(rho, time, tau=1):
     '''Applies depolarization with characteristic time "tau"
     '''
     p = 1 - np.exp(- time/tau)
