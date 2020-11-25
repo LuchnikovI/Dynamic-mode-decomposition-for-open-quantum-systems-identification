@@ -35,7 +35,7 @@ def hankel(T, K):
         tensor of shape (batch_size, n-K+1, K, m)"""
     shape_inv = tf.TensorShape([T.shape[0],
                                 None,
-                                int(K),
+                                K,
                                 T.shape[-1]])
 
     L = T.shape[1]
