@@ -109,7 +109,7 @@ def optimal_K(trajectories, eps=1e-6):
         delta = Y_resh - Y_resh @ v @ tf.linalg.adjoint(v)
         return K_new, tf.math.real(tf.linalg.norm(delta)), q, p
 
-    cond = lambda K, err, q, p: err > tf.math.sqrt(tf.cast(2 * q * p, dtype=err.dtype)) * eps
+    cond = lambda K, err, q, p: err > 0.5 * tf.math.sqrt(tf.cast(2 * q * p, dtype=err.dtype)) * eps
 
     K, _, _, _ = tf.while_loop(cond, body, loop_vars=[K, err, q, p])
     return int(K)
