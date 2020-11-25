@@ -33,7 +33,10 @@ def hankel(T, K):
         K: int value, depth of the Hankel matrix
     Returns:
         tensor of shape (batch_size, n-K+1, K, m)"""
-    shape_inv = tf.TensorShape([tf.shape(T)[0], None, tf.constant(K), tf.shape(T)[-1]])
+    shape_inv = tf.TensorShape([tf.shape(T)[0].numpy()),
+                                None,
+                                tf.constant(K).numpy(),
+                                tf.shape(T)[-1].numpy()])
 
     L = T.shape[1]
     i = tf.constant(1)
