@@ -59,7 +59,7 @@ def trunc_svd(X, eps=1e-6):
         (r,), (p, r), where r is optimal rank"""
 
     # svd
-    u, s, v = tf.linalg.svd(X)
+    s, u, v = tf.linalg.svd(X)
 
     real_dtype = s.dtype
     complex_dtype = u.dtype
@@ -72,7 +72,7 @@ def trunc_svd(X, eps=1e-6):
 
     # optimal rank
     r = tf.reduce_sum(tf.cast(s > threshold, dtype=tf.int32))
-    return u[:, :r], tf.cast(s[:r], dtype=complex_dtype), v[:, :r]
+    return tf.cast(s[:r], dtype=complex_dtype), u[:, :r], v[:, :r]
 
 
 def optimal_K(trajectories, eps=1e-6):
