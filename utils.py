@@ -35,7 +35,7 @@ def hankel(T, K):
         tensor of shape (batch_size, n-K+1, K, m)"""
     shape_inv = tf.TensorShape([T.get_shape()[0],
                                 None,
-                                int(K),
+                                K,
                                 T.get_shape()[-1]])
 
     L = T.shape[1]
@@ -107,7 +107,7 @@ def optimal_K(trajectories, eps=1e-6):
     cond = lambda K, err, q, p: err > tf.math.sqrt(tf.cast(2 * q * p, dtype=err.dtype)) * eps
 
     K, _, _, _ = tf.while_loop(cond, body, loop_vars=[K, err, q, p])
-    return K
+    return int(K)
 
 
 @tf.function
