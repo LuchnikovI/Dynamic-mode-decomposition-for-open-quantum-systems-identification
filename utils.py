@@ -115,7 +115,7 @@ def optimal_K(trajectories, eps=1e-6):
     return int(K)
 
 
-def dmd(trajectories, eps=1e-6):
+def dmd(trajectories, K=None, eps=1e-6, auto_K=False):
     """Solves the following linear regression problem
     ||TX - Y||_F --> min with respect to transition matrix T.
     Matrix T is found by using dynamic mode decomposition (dmd) in the form
@@ -126,7 +126,10 @@ def dmd(trajectories, eps=1e-6):
         trajectories: complex valued tensor of shape (bs, n, m, m),
             quantum trajectories, bs enumerates trajectories, n is total
             number of time steps, m is dimension of density matrix
+        K: int value, memory depth
         eps: float value, std of additive noise
+        auto_K: boolean value, shows if we use automatic K determination
+            or not
     Returns:
         three tensors of shapes (r,), (n, r), and (n, r),
         dominant eigenvalues and corresponding (right and left)
@@ -142,16 +145,19 @@ def dmd(trajectories, eps=1e-6):
     # reshape density matrices to vectors
     t = tf.reshape(trajectories, (bs, n, m**2))
     # build hankel matrix of shape (bs, n-K+1, K, m**2)
-    K = optimal_K(t, eps=eps)
-    t = hankel(t, K)
+    if auto_K:
+        K_opt = optimal_K(t, eps=eps)
+    else:
+        K_opt = K
+    t = hankel(t, K_opt)
     # build X and Y tensors, both have shape (K*(m**2), bs, n-K)
-    t = tf.reshape(t, (bs, n-K+1, K*(m**2)))
+    t = tf.reshape(t, (bs, n-K_opt+1, K_opt*(m**2)))
     t = tf.transpose(t, (2, 0, 1))
     X = t[..., :-1]
     Y = t[..., 1:]
     # reshape X and Y tensors to matrices
-    X_resh = tf.reshape(X, (K*(m**2), bs*(n-K)))
-    Y_resh = tf.reshape(Y, (K*(m**2), bs*(n-K)))
+    X_resh = tf.reshape(X, (K_opt*(m**2), bs*(n-K_opt)))
+    Y_resh = tf.reshape(Y, (K_opt*(m**2), bs*(n-K_opt)))
     # SVD of X_resh matrix
     lmbd, u, v = trunc_svd(X_resh, eps=eps)
     # inverse of singular values
@@ -168,7 +174,7 @@ def dmd(trajectories, eps=1e-6):
     norm = tf.math.sqrt(norm)
     right = right / norm
     left = left / tf.math.conj(norm)
-    return eig_vals, right, left, K
+    return eig_vals, right, left, K_opt
 
 
 @tf.function

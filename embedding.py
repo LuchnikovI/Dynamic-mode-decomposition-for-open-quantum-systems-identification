@@ -1,6 +1,5 @@
 import tensorflow as tf
 from utils import dmd
-import math
 
 class Embedding:
     '''This class provides tools for dmd based learning of
@@ -12,13 +11,16 @@ class Embedding:
         self.dec = None
         self.K = None
 
-    def learn(self, trajectories, eps=1e-6):
+    def learn(self, trajectories, K=None, eps=1e-6, auto_K=False):
         '''Reconstructs markovian embedding from trajectories.
         Args:
             trajectories: complex valued tensor of shape (bs, n, m, m),
                 where bs is number of trajectories, n is total number of
                 time steps, m is size of density matrix
-            eps: float value, std of additive noise'''
+            K: int value, memory depth
+            eps: float value, std of additive noise
+            auto_K: boolean value, shows if we use automatic K determination
+                or not'''
 
         # bs is number of trajectories
         # n is number of time steps
@@ -27,7 +29,7 @@ class Embedding:
         self.sys_dim = m
         dtype = trajectories.dtype
         # dmd
-        lmbd, right, left, K = dmd(trajectories, eps)
+        lmbd, right, left, K = dmd(trajectories, K, eps, auto_K)
         lmbd = tf.cast(lmbd, dtype=dtype)
         self.K = K
         self.rank = lmbd.shape[0]
