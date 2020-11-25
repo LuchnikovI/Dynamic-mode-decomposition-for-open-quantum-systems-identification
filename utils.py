@@ -76,7 +76,15 @@ def trunc_svd(X, eps=1e-6):
 
 
 def optimal_K(trajectories, eps=1e-6):
-    
+    """Returns minimal sufficient K.
+    Args:
+        trajectories: complex valued tensor of shape (bs, n, m, m),
+            quantum trajectories, bs enumerates trajectories, n is total
+            number of time steps, m is dimension of density matrix
+        eps: std of additive noise
+    Returns:
+        int number, minimal sufficient K"""
+
     shape = tf.shape(trajectories)
     bs, n,  m = shape[0], shape[1], shape[2]
     dtype = trajectories.dtype
@@ -110,7 +118,7 @@ def optimal_K(trajectories, eps=1e-6):
 
 
 @tf.function
-def dmd(trajectories, K, eps=1e-5):
+def dmd(trajectories, eps=1e-6):
     """Solves the following linear regression problem
     ||TX - Y||_F --> min with respect to transition matrix T.
     Matrix T is found by using dynamic mode decomposition (dmd) in the form
@@ -122,7 +130,7 @@ def dmd(trajectories, K, eps=1e-5):
             quantum trajectories, bs enumerates trajectories, n is total
             number of time steps, m is dimension of density matrix
         K: int number, memory depth
-        eps: float value, tolerance that defines rank
+        eps: float value, std of additive noise
     Returns:
         three tensors of shapes (r,), (n, r), and (n, r),
         dominant eigenvalues and corresponding (right and left)
@@ -135,10 +143,10 @@ def dmd(trajectories, K, eps=1e-5):
     # n is number of time steps
     # m is the size of density matrix
     bs, n, m, _ = trajectories.shape
-    dtype = trajectories.dtype
     # reshape density matrices to vectors
     t = tf.reshape(trajectories, (bs, n, m**2))
     # build hankel matrix of shape (bs, n-K+1, K, m**2)
+    K = optimal_K(trajectories, eps=1e-6)
     t = hankel(t, K)
     # build X and Y tensors, both have shape (K*(m**2), bs, n-K)
     t = tf.reshape(t, (bs, n-K+1, K*(m**2)))
@@ -149,15 +157,9 @@ def dmd(trajectories, K, eps=1e-5):
     X_resh = tf.reshape(X, (K*(m**2), bs*(n-K)))
     Y_resh = tf.reshape(Y, (K*(m**2), bs*(n-K)))
     # SVD of X_resh matrix
-    lmbd, u, v = tf.linalg.svd(X_resh)
-    # number of singular vals > eps
-    ind = tf.reduce_sum(tf.cast(lmbd > eps, dtype=tf.int32))
-    # truncation of all elements of the svd
-    lmbd = lmbd[:ind]
+    lmbd, u, v = trunc_svd(X_resh, eps=1e-6)
+    # inverse of singular values
     lmbd_inv = 1 / lmbd
-    lmbd_inv = tf.cast(lmbd_inv, dtype=dtype)
-    u = u[:, :ind]
-    v = v[:, :ind]
     # eigendecomposition of T_tilda
     T_tilda = tf.linalg.adjoint(u) @ Y_resh @ (v * lmbd_inv)
     eig_vals, right = tf.linalg.eig(T_tilda)
