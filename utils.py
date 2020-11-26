@@ -115,7 +115,7 @@ def optimal_K(trajectories, eps=1e-6):
     return int(K)
 
 
-def dmd(trajectories, K=None, eps=1e-6, auto_K=False):
+def dmd(trajectories, K=None, eps=1e-6, auto_K=False, type='exact'):
     """Solves the following linear regression problem
     ||TX - Y||_F --> min with respect to transition matrix T.
     Matrix T is found by using dynamic mode decomposition (dmd) in the form
@@ -130,6 +130,7 @@ def dmd(trajectories, K=None, eps=1e-6, auto_K=False):
         eps: float value, std of additive noise
         auto_K: boolean value, shows if we use automatic K determination
             or not
+        type: string specifying type of DMD ('standard' or 'exact')
     Returns:
         three tensors of shapes (r,), (n, r), and (n, r),
         dominant eigenvalues and corresponding (right and left)
@@ -167,7 +168,10 @@ def dmd(trajectories, K=None, eps=1e-6, auto_K=False):
     eig_vals, right = tf.linalg.eig(T_tilda)
     left = tf.linalg.adjoint(tf.linalg.inv(right))
     # eigendecomposition of T
-    right = Y_resh @ (v * lmbd_inv) @ right
+    if type == 'standard':
+        right = u @ right
+    elif type == 'exact':
+        right = Y_resh @ (v * lmbd_inv) @ right
     left = u @ left
     norm = tf.linalg.adjoint(left) * tf.linalg.matrix_transpose(right)
     norm = tf.reduce_sum(norm, axis=-1)
