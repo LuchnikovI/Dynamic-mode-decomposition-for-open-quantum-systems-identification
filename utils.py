@@ -3,9 +3,10 @@ import math
 
 @tf.function
 def f_basis(n, dtype=tf.complex128):
-    """The function returns basis in the space of real traceless matrices
-    of size n. For all matrices, the following condition holds true 
-    <F_i, F_j> = I_ij, where I is the identity matrix.
+    """The function returns orthonormal basis in the linear space of
+    real traceless matrices of size n. For all matrices,
+    the following condition holds true <F_i, F_j> = I_ij,
+    where I is the identity matrix.
     Args:
         n: int value, dimension of a space
         dtype: type of matrices
@@ -29,9 +30,10 @@ def hankel(T, K):
     """Return Hankel tensor from an ordinary tensor.
     Args:
         T: tensor of shape (batch_size, n, m)
-        K: int value, mamort depth
+        K: int value, memory depth
     Returns:
         tensor of shape (batch_size, n-K+1, K, m)"""
+
     shape_inv = tf.TensorShape([T.get_shape()[0],
                                 None,
                                 K,
@@ -48,10 +50,10 @@ def hankel(T, K):
 
 
 def trunc_svd(X, eps=1e-6):
-    """Calculates truncated svd with optimal threshold.
+    """Calculates truncated svd of a matrix with a given std of noise.
     Args:
         X: complex valued tensor of shape (q, p)
-        eps: std of additive noise
+        eps: real valued scalar, std of additive noise
     Returns:
         three complex valued tensors u, s, v of shapes (q, r),
         (r,), (p, r), where r is optimal rank"""
