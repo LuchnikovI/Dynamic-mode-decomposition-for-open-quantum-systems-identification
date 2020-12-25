@@ -64,8 +64,8 @@ def trunc_svd(X):
     complex_dtype = u.dtype
 
     # threshold
-    dd_log_s = log_s[2:] + log_s[:-2] - 2 * log_s[1:-1]
-    r = tf.argmax(dd_log_s) + 1
+    dd_log_s = log_s[3:] + log_s[1:-2] - 2 * log_s[2:-1]
+    r = tf.argmax(dd_log_s) + 2
 
     return tf.cast(s[:r], dtype=complex_dtype), u[:, :r], v[:, :r]
 
