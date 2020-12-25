@@ -49,29 +49,24 @@ def hankel(T, K):
     return t
 
 
-def trunc_svd(X, eps=1e-6):
-    """Calculates truncated svd of a matrix with a given std of noise.
+def trunc_svd(X):
+    """Calculates truncated svd of a matrix.
     Args:
         X: complex valued tensor of shape (q, p)
-        eps: real valued scalar, std of additive noise
     Returns:
         three complex valued tensors u, s, v of shapes (q, r),
         (r,), (p, r), where r is optimal rank"""
 
     # svd
     s, u, v = tf.linalg.svd(X)
+    log_s = tf.math.log(s)
 
-    real_dtype = s.dtype
     complex_dtype = u.dtype
-    shape = tf.shape(X)
 
     # threshold
-    q, p = shape[0], shape[1]
-    q, p = tf.cast(q, dtype=real_dtype), tf.cast(p, dtype=real_dtype)
-    threshold = eps * (tf.math.sqrt(2 * q) + tf.math.sqrt(2 * p))
+    dd_log_s = log_s[2:] + log_s[:-2] - 2 * log_s[1:-1]
+    r = tf.argmax(dd_log_s) + 1
 
-    # optimal rank
-    r = tf.reduce_sum(tf.cast(s > threshold, dtype=tf.int32))
     return tf.cast(s[:r], dtype=complex_dtype), u[:, :r], v[:, :r]
 
 
@@ -162,7 +157,7 @@ def dmd(trajectories, K=None, eps=1e-6, auto_K=False, type='exact'):
     X_resh = tf.reshape(X, (K_opt*(m**2), bs*(n-K_opt)))
     Y_resh = tf.reshape(Y, (K_opt*(m**2), bs*(n-K_opt)))
     # SVD of X_resh matrix
-    lmbd, u, v = trunc_svd(X_resh, eps=eps)
+    lmbd, u, v = trunc_svd(X_resh)
     # inverse of singular values
     lmbd_inv = 1 / lmbd
     # eigendecomposition of T_tilda
