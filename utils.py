@@ -206,7 +206,7 @@ def dmd(trajectories, K=None, eps=1e-6,
     right = right / norm
     left = left / tf.math.conj(norm)
     if denoise:
-        eig_vals, right, left, K_opt, denoised_t
+        return eig_vals, right, left, K_opt, denoised_t
     else:
         return eig_vals, right, left, K_opt
 
