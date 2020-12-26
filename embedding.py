@@ -41,9 +41,9 @@ class Embedding:
         dtype = trajectories.dtype
         # dmd
         if denoise:
-            lmbd, right, left, K, denoised_t = dmd(trajectories, K, eps, auto_K, type=type, denoise)
+            lmbd, right, left, K, denoised_t = dmd(trajectories, K, eps, auto_K, type=type, denoise=denoise)
         else:
-            lmbd, right, left, K = dmd(trajectories, K, eps, auto_K, type=type, denoise)
+            lmbd, right, left, K = dmd(trajectories, K, eps, auto_K, type=type, denoise=denoise)
         lmbd = tf.cast(lmbd, dtype=dtype)
         self.K = K
         self.rank = lmbd.shape[0]
