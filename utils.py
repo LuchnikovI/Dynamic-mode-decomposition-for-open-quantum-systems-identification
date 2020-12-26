@@ -7,9 +7,11 @@ def f_basis(n, dtype=tf.complex128):
     real traceless matrices of size n. For all matrices,
     the following condition holds true <F_i, F_j> = I_ij,
     where I is the identity matrix.
+
     Args:
-        n: int value, dimension of a space
+        n: int value, dimension of a linear space, where matrices act
         dtype: type of matrices
+
     Returns:
         tensor of shape (n**2-1, n, n), 0th index enumerates matrices"""
 
@@ -28,9 +30,11 @@ def f_basis(n, dtype=tf.complex128):
 
 def hankel(T, K):
     """Return Hankel tensor from an ordinary tensor.
+
     Args:
         T: tensor of shape (batch_size, n, m)
         K: int value, memory depth
+
     Returns:
         tensor of shape (batch_size, n-K+1, K, m)"""
 
@@ -51,9 +55,11 @@ def hankel(T, K):
 
 def trunc_svd(X, eps=1e-6):
     """Calculates truncated svd of a matrix with a given std of noise.
+
     Args:
         X: complex valued tensor of shape (q, p)
         eps: real valued scalar, std of additive noise
+
     Returns:
         three complex valued tensors u, s, v of shapes (q, r),
         (r,), (p, r), where r is optimal rank"""
@@ -76,17 +82,19 @@ def trunc_svd(X, eps=1e-6):
 
 
 def optimal_K(trajectories, eps=1e-6):
-    """Returns minimal sufficient K.
-    Args:
-        trajectories: complex valued tensor of shape (bs, n, m),
-            quantum trajectories, bs enumerates trajectories, n is total
-            number of time steps, m is dimension of density matrix
-        eps: std of additive noise
-    Returns:
-        int number, minimal sufficient K"""
+    """Returns the minimal sufficient memory depth K.
 
-    shape = tf.shape(trajectories)
-    bs, n,  m = shape[0], shape[1], shape[2]
+    Args:
+        trajectories: complex valued tensor of shape (batch_size, n, mm),
+            quantum trajectories, batch_size enumerates trajectories,
+            n is the total number of time steps, mm is the number of elements
+            in system's density matrix
+        eps: real valued scalar, std of additive noise
+
+    Returns:
+        int valued scalar, minimal sufficient K"""
+
+    bs, n, mm = tf.shape(trajectories)
     dtype = trajectories.dtype
     
     # initial parameters
@@ -102,7 +110,7 @@ def optimal_K(trajectories, eps=1e-6):
         X = H[:, :-1]
         Y = H[:, 1:]
         q = tf.constant(bs * N)
-        p = tf.constant(K_new * m)
+        p = tf.constant(K_new * mm)
         X_resh = tf.reshape(X, (q, p))
         Y_resh = tf.reshape(Y, (q, p))
         X_resh = tf.transpose(X_resh)
@@ -111,35 +119,46 @@ def optimal_K(trajectories, eps=1e-6):
         delta = Y_resh - Y_resh @ v @ tf.linalg.adjoint(v)
         return K_new, tf.math.real(tf.linalg.norm(delta)), q, p
 
-    cond = lambda K, err, q, p: err > 0.9 * tf.math.sqrt(tf.cast(2 * q * p, dtype=err.dtype)) * eps
+    cond = lambda K, err, q, p: err > tf.math.sqrt(tf.cast(2 * q * p, dtype=err.dtype)) * eps
 
     K, _, _, _ = tf.while_loop(cond, body, loop_vars=[K, err, q, p])
     return int(K)
 
 
-def dmd(trajectories, K=None, eps=1e-6, auto_K=False, type='exact'):
+def dmd(trajectories, K=None, eps=1e-6,
+        auto_K=False, type='exact', denoise=False):
+
     """Solves the following linear regression problem
     ||TX - Y||_F --> min with respect to transition matrix T.
     Matrix T is found by using dynamic mode decomposition (dmd) in the form
     of its eigendecomposition with the minimal possible rank.
     You may read more about dmd in the following paper
     https://arxiv.org/pdf/1312.0041.pdf
+
     Args:
-        trajectories: complex valued tensor of shape (bs, n, m, m),
-            quantum trajectories, bs enumerates trajectories, n is total
-            number of time steps, m is dimension of density matrix
-        K: int value, memory depth
-        eps: float value, std of additive noise
-        auto_K: boolean value, shows if we use automatic K determination
-            or not
+        trajectories: complex valued tensor of shape (batch_size, n, m, m),
+            quantum trajectories, batch_size enumerates trajectories,
+            n is the total number of time steps, m is the dimension
+            of density matrix
+        K: int valued scalar, memory depth
+        eps: real valued scalar, std of additive noise
+        auto_K: boolean scalar, shows wether we use automatic memory depth K
+            determination or not
         type: string specifying type of DMD ('standard' or 'exact')
+        denoise: boolean scalar, shows wether it returns the denoised
+            trajectory or not
+
     Returns:
+        if denoise is False,
         three tensors of shapes (r,), (n, r), and (n, r),
         dominant eigenvalues and corresponding (right and left)
-        eigenvectors, and one int value, representing the minimal sufficient K
+        eigenvectors, and one int valued scalar, representing the
+        minimal sufficient K, if denoise is True, it also returns
+        denoised trajectory
+
     Note:
-        n -- dimension of one data point, r -- rank that is determined
-        by tolerance eps."""
+        n is the dimension of one data point, r is the rank that is determined
+        by std of additive noise eps."""
     
     # bs is batch size
     # n is number of time steps
@@ -163,6 +182,12 @@ def dmd(trajectories, K=None, eps=1e-6, auto_K=False, type='exact'):
     Y_resh = tf.reshape(Y, (K_opt*(m**2), bs*(n-K_opt)))
     # SVD of X_resh matrix
     lmbd, u, v = trunc_svd(X_resh, eps=eps)
+    # denoising
+    if denoise:
+        denoised_t = u @ (tf.linalg.adjoint(u) @ tf.reshape(t, (K_opt*(m**2), bs*(n-K_opt+1))))
+        denoised_t = tf.reshape(denoised_t, (K_opt, m, m, bs, (n-K_opt+1)))
+        denoised_t = tf.transpose(denoised_t, (3, 4, 0, 1, 2))
+        denoised_t = tf.concat([denoised_t[:, :, 0], denoised_t[:, -1, 1:]], axis=1)
     # inverse of singular values
     lmbd_inv = 1 / lmbd
     # eigendecomposition of T_tilda
@@ -180,7 +205,10 @@ def dmd(trajectories, K=None, eps=1e-6, auto_K=False, type='exact'):
     norm = tf.math.sqrt(norm)
     right = right / norm
     left = left / tf.math.conj(norm)
-    return eig_vals, right, left, K_opt
+    if denoise:
+        eig_vals, right, left, K_opt, denoised_t
+    else:
+        return eig_vals, right, left, K_opt
 
 
 @tf.function
@@ -188,13 +216,16 @@ def solve_regression(X, Y):
     """Solves the following linear regression problem
     ||TX - Y||_F --> min with respect to transition matrix T.
     T = Y @ pinv(X)
+
     Args:
-        X: tensor of shape(n, ...)
-        Y: tensor of shape(n, ...)
+        X: complex valued tensor of shape(n, ...)
+        Y: complex valued tensor of shape(n, ...)
+
     Returns:
-        tensor of shape (n, n), transition matrix
+        complex valued tensor of shape (n, n), transition matrix
+
     Note:
-        n -- dimension of one data point"""
+        n is the dimension of one data point"""
     
     dtype = X.dtype
     X_resh = tf.reshape(X, (X.shape[0], -1))
