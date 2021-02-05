@@ -53,12 +53,12 @@ def hankel(T, K):
     return t
 
 
-def trunc_svd(X, eps=1e-6):
+def trunc_svd(X, threshold):
     """Calculates truncated svd of a matrix with a given std of noise.
 
     Args:
         X: complex valued tensor of shape (q, p)
-        eps: real valued scalar, std of additive noise
+        threshold: real valued scalar, threshold
 
     Returns:
         three complex valued tensors u, s, v of shapes (q, r),
@@ -67,14 +67,7 @@ def trunc_svd(X, eps=1e-6):
     # svd
     s, u, v = tf.linalg.svd(X)
 
-    real_dtype = s.dtype
     complex_dtype = u.dtype
-    shape = tf.shape(X)
-
-    # threshold
-    q, p = shape[0], shape[1]
-    q, p = tf.cast(q, dtype=real_dtype), tf.cast(p, dtype=real_dtype)
-    threshold = eps * (tf.math.sqrt(2 * q) + tf.math.sqrt(2 * p))
 
     # optimal rank
     r = tf.reduce_sum(tf.cast(s > threshold, dtype=tf.int32))
@@ -172,6 +165,11 @@ def dmd(trajectories, K=None, eps=1e-6,
     else:
         K_opt = K
     t = hankel(t, K_opt)
+    noise = tf.complex(eps * tf.random.normal((bs, n, m**2)),
+                       eps * tf.random.normal((bs, n, m**2)))
+    noise = hankel(noise, K_opt)
+    s_noise, _, _ = tf.linalg.svd(noise)
+    threshold = tf.reduce_max(s_noise)
     # build X and Y tensors, both have shape (K*(m**2), bs, n-K)
     t = tf.reshape(t, (bs, n-K_opt+1, K_opt*(m**2)))
     t = tf.transpose(t, (2, 0, 1))
@@ -181,7 +179,7 @@ def dmd(trajectories, K=None, eps=1e-6,
     X_resh = tf.reshape(X, (K_opt*(m**2), bs*(n-K_opt)))
     Y_resh = tf.reshape(Y, (K_opt*(m**2), bs*(n-K_opt)))
     # SVD of X_resh matrix
-    lmbd, u, v = trunc_svd(X_resh, eps=eps)
+    lmbd, u, v = trunc_svd(X_resh, threshold=threshold)
     # denoising
     if denoise:
         denoised_t = u @ (tf.linalg.adjoint(u) @ tf.reshape(t, (K_opt*(m**2), bs*(n-K_opt+1))))
