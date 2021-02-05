@@ -70,7 +70,7 @@ def trunc_svd(X, threshold):
     complex_dtype = u.dtype
 
     # optimal rank
-    r = tf.reduce_sum(tf.cast(s > threshold, dtype=tf.int32))
+    r = tf.reduce_sum(tf.cast(s > tf.cast(threshold, s.dtype), dtype=tf.int32))
     return tf.cast(s[:r], dtype=complex_dtype), u[:, :r], v[:, :r]
 
 
