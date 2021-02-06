@@ -66,7 +66,7 @@ def trunc_svd(X, eps=1e-6):
     shape = tf.shape(X)
 
     # threshold
-    m, n = 2 * shape[0], 2 * shape[1]
+    m, n = shape[0], shape[1]
     m, n = tf.cast(m, dtype=real_dtype), tf.cast(n, dtype=real_dtype)
     beta = m / n
     lmbd = tf.math.sqrt(2 * (beta + 1) + (8 * beta) / (beta + 1 + tf.math.sqrt(beta ** 2 + 14 * beta + 1)))
