@@ -7,11 +7,9 @@ def f_basis(n, dtype=tf.complex128):
     real traceless matrices of size n. For all matrices,
     the following condition holds true <F_i, F_j> = I_ij,
     where I is the identity matrix.
-
     Args:
         n: int value, dimension of a linear space, where matrices act
         dtype: type of matrices
-
     Returns:
         tensor of shape (n**2-1, n, n), 0th index enumerates matrices"""
 
@@ -30,11 +28,9 @@ def f_basis(n, dtype=tf.complex128):
 
 def hankel(T, K):
     """Return Hankel tensor from an ordinary tensor.
-
     Args:
         T: tensor of shape (batch_size, n, m)
         K: int value, memory depth
-
     Returns:
         tensor of shape (batch_size, n-K+1, K, m)"""
 
@@ -53,13 +49,11 @@ def hankel(T, K):
     return t
 
 
-def trunc_svd(X, threshold):
+def trunc_svd(X, eps=1e-6):
     """Calculates truncated svd of a matrix with a given std of noise.
-
     Args:
         X: complex valued tensor of shape (q, p)
-        threshold: real valued scalar, threshold
-
+        eps: real valued scalar, std of additive noise
     Returns:
         three complex valued tensors u, s, v of shapes (q, r),
         (r,), (p, r), where r is optimal rank"""
@@ -67,23 +61,31 @@ def trunc_svd(X, threshold):
     # svd
     s, u, v = tf.linalg.svd(X)
 
+    real_dtype = s.dtype
     complex_dtype = u.dtype
+    shape = tf.shape(X)
+
+    # threshold
+    m, n = 2 * shape[0], 2 * shape[1]
+    m, n = tf.cast(m, dtype=real_dtype), tf.cast(n, dtype=real_dtype)
+    beta = m / n
+    lmbd = tf.math.sqrt(2 * (beta + 1) + (8 * beta) / (beta + 1 + tf.math.sqrt(beta ** 2 + 14 * beta + 1)))
+    threshold = lmbd * tf.math.sqrt(n) * eps
+    
 
     # optimal rank
-    r = tf.reduce_sum(tf.cast(s > tf.cast(threshold, s.dtype), dtype=tf.int32))
+    r = tf.reduce_sum(tf.cast(s > threshold, dtype=tf.int32))
     return tf.cast(s[:r], dtype=complex_dtype), u[:, :r], v[:, :r]
 
 
 def optimal_K(trajectories, eps=1e-6):
     """Returns the minimal sufficient memory depth K.
-
     Args:
         trajectories: complex valued tensor of shape (batch_size, n, mm),
             quantum trajectories, batch_size enumerates trajectories,
             n is the total number of time steps, mm is the number of elements
             in system's density matrix
         eps: real valued scalar, std of additive noise
-
     Returns:
         int valued scalar, minimal sufficient K"""
 
@@ -127,7 +129,6 @@ def dmd(trajectories, K=None, eps=1e-6,
     of its eigendecomposition with the minimal possible rank.
     You may read more about dmd in the following paper
     https://arxiv.org/pdf/1312.0041.pdf
-
     Args:
         trajectories: complex valued tensor of shape (batch_size, n, m, m),
             quantum trajectories, batch_size enumerates trajectories,
@@ -140,7 +141,6 @@ def dmd(trajectories, K=None, eps=1e-6,
         type: string specifying type of DMD ('standard' or 'exact')
         denoise: boolean scalar, shows wether it returns the denoised
             trajectory or not
-
     Returns:
         if denoise is False,
         three tensors of shapes (r,), (n, r), and (n, r),
@@ -148,7 +148,6 @@ def dmd(trajectories, K=None, eps=1e-6,
         eigenvectors, and one int valued scalar, representing the
         minimal sufficient K, if denoise is True, it also returns
         denoised trajectory
-
     Note:
         n is the dimension of one data point, r is the rank that is determined
         by std of additive noise eps."""
@@ -165,12 +164,6 @@ def dmd(trajectories, K=None, eps=1e-6,
     else:
         K_opt = K
     t = hankel(t, K_opt)
-    noise = tf.complex(eps * tf.random.normal((bs, n, m**2)),
-                       eps * tf.random.normal((bs, n, m**2)))
-    noise = hankel(noise, K_opt)
-    s_noise, _, _ = tf.linalg.svd(noise)
-    threshold = 2 * tf.reduce_max(s_noise)
-    threshold = tf.math.maximum(threshold, 1e-5)
     # build X and Y tensors, both have shape (K*(m**2), bs, n-K)
     t = tf.reshape(t, (bs, n-K_opt+1, K_opt*(m**2)))
     t = tf.transpose(t, (2, 0, 1))
@@ -180,7 +173,7 @@ def dmd(trajectories, K=None, eps=1e-6,
     X_resh = tf.reshape(X, (K_opt*(m**2), bs*(n-K_opt)))
     Y_resh = tf.reshape(Y, (K_opt*(m**2), bs*(n-K_opt)))
     # SVD of X_resh matrix
-    lmbd, u, v = trunc_svd(X_resh, threshold=threshold)
+    lmbd, u, v = trunc_svd(X_resh, eps=eps)
     # denoising
     if denoise:
         denoised_t = u @ (tf.linalg.adjoint(u) @ tf.reshape(t, (K_opt*(m**2), bs*(n-K_opt+1))))
@@ -215,14 +208,11 @@ def solve_regression(X, Y):
     """Solves the following linear regression problem
     ||TX - Y||_F --> min with respect to transition matrix T.
     T = Y @ pinv(X)
-
     Args:
         X: complex valued tensor of shape(n, ...)
         Y: complex valued tensor of shape(n, ...)
-
     Returns:
         complex valued tensor of shape (n, n), transition matrix
-
     Note:
         n is the dimension of one data point"""
     
